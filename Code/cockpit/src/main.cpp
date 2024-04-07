@@ -22,7 +22,7 @@ static const int HALF_CELL_WIDTH = CELL_WIDTH / 2;
 static const int CELL_HIGHT = SCREEN_HEIGHT / ROWS;
 static const int HALF_CELL_HIGHT = CELL_HIGHT / 2;
 static const int COL[] = {0, CELL_WIDTH, CELL_WIDTH * 2, CELL_WIDTH * 3, CELL_WIDTH * 4, CELL_WIDTH * 6, CELL_WIDTH * 7};
-static const int ROW[] = {0, CELL_HIGHT, CELL_HIGHT * 2, CELL_HIGHT * 3, CELL_HIGHT * 4, CELL_HIGHT * 6, CELL_HIGHT * 7};
+static const int ROW[] = {0, CELL_HIGHT, CELL_HIGHT * 2 - 2, CELL_HIGHT * 3 - 1, CELL_HIGHT * 4, CELL_HIGHT * 6, CELL_HIGHT * 7};
 
 void setup()
 {
@@ -61,23 +61,22 @@ void setup()
   tft.fillScreen(ILI9341_BLACK);
   tft.setRotation(3);
 
-  // drawGauge(0, 0,ILI9341_WHITE,ILI9341_GREEN);
-  for (int i = 0; i < 4; i++)
-  {
-    for (int j = 0; j < 4; j++)
-    {
-      drawCell(COL[i], ROW[j], ILI9341_GREEN, 21.8, "MOT", "°C");
-    }
-  }
-  clearCell(COL[2], ROW[3]);
-  // drawCell(COL[0], ROW[0],ILI9341_GREEN, 21.8, "MOT", "°C");
-  //  drawCell(80, 179,ILI9341_GREEN, 31.7, "PAC", "°C");
-  //  drawCell(160, 179,ILI9341_GREEN, 38.1,"BT1", "°C");
-  //  drawCell(240, 179,ILI9341_GREEN, 27.4,"BT2", "°C");
-  //  drawCell(240, 118,ILI9341_RED, 277,"BT2", "A");
-  //  drawCell(160, 118,ILI9341_YELLOW, 48.1,"BT2", "°V");
-  //  drawDoubleCell(0, 118,ILI9341_YELLOW, 27.4,"BT2", "°C");
-  //  displaySpeed(0, 0,ILI9341_YELLOW, 27,"BT2", "km/h");
+  drawCell(COL[0], ROW[3], 1, 1, ILI9341_GREEN, 21.8, "MOT", "°C");
+  drawCell(COL[1], ROW[3], 1, 1, ILI9341_GREEN, 21.8, "PAC", "°C");
+  drawCell(COL[2], ROW[3], 1, 1, ILI9341_RED, 21.8, "BT1", "°C");
+  drawCell(COL[3], ROW[3], 1, 1, ILI9341_YELLOW, 21.8, "BAT2", "°C");
+  drawCell(COL[0], ROW[0], 2, 1, ILI9341_YELLOW, 21.8, "ENG", "%");
+
+  // drawCell(COL[2], ROW[2],2,2, ILI9341_GREEN, 21.8, "MOT", "°C");
+  //  drawCell(COL[1], ROW[3], ILI9341_GREEN, 31.7, "PAC", "°C");
+  //  drawCell(COL[2], ROW[3], ILI9341_GREEN, 38.1, "BT1", "°C");
+  //  drawCell(COL[3], ROW[3], ILI9341_GREEN, 27.4, "BT2", "°C");
+  //  drawCell(COL[3], ROW[2], ILI9341_RED, 27, "BT2", "A");
+  //  drawCell(COL[3], ROW[1], ILI9341_RED, 27, "BT2", "A");
+  //  drawCell(COL[3], ROW[0], ILI9341_PURPLE, 27, "BT2", "A");
+  //  drawCell(COL[0], ROW[0], ILI9341_ORANGE, 48.1, "BT2", "°V");
+  //  drawDoubleCell(0, 118, ILI9341_YELLOW, 27.4, "BT2", "°C");
+  // displaySpeed(COL[0], ROW[0], ILI9341_YELLOW, 27, "BT2", "km/h");
   delay(3000);
 
   Serial.println(F("Done!"));
@@ -85,10 +84,4 @@ void setup()
 
 void loop(void)
 {
-  for (uint8_t rotation = 0; rotation < 4; rotation++)
-  {
-
-    // testText();
-    delay(1000);
-  }
 }
