@@ -37,7 +37,7 @@ void setup()
   tft.println("Waiting for Arduino Serial Monitor...");
 
   Serial.begin(9600);
-  while (!Serial)
+  //while (!Serial)
     ; // wait for Arduino Serial Monitor
   Serial.println("ILI9341 Test!");
 
@@ -65,7 +65,8 @@ void setup()
   drawCell(COL[1], ROW[3], 1, 1, ILI9341_GREEN, 21.8, "PAC", "°C");
   drawCell(COL[2], ROW[3], 1, 1, ILI9341_RED, 21.8, "BT1", "°C");
   drawCell(COL[3], ROW[3], 1, 1, ILI9341_YELLOW, 21.8, "BAT2", "°C");
-  drawCell(COL[0], ROW[0], 2, 1, ILI9341_YELLOW, 21.8, "ENG", "%");
+  drawCell(COL[0], ROW[2], 2, 1, ILI9341_YELLOW, 21.8, "ENG", "%", true);
+  
 
   // drawCell(COL[2], ROW[2],2,2, ILI9341_GREEN, 21.8, "MOT", "°C");
   //  drawCell(COL[1], ROW[3], ILI9341_GREEN, 31.7, "PAC", "°C");
