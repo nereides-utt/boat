@@ -23,7 +23,7 @@ static const int CELL_HIGHT = SCREEN_HEIGHT / ROWS;
 static const int HALF_CELL_HIGHT = CELL_HIGHT / 2;
 static const int COL[] = {0, CELL_WIDTH, CELL_WIDTH * 2, CELL_WIDTH * 3, CELL_WIDTH * 4, CELL_WIDTH * 6, CELL_WIDTH * 7};
 static const int ROW[] = {0, CELL_HIGHT, CELL_HIGHT * 2 - 2, CELL_HIGHT * 3 - 1, CELL_HIGHT * 4, CELL_HIGHT * 6, CELL_HIGHT * 7};
-
+//modif
 void setup()
 {
   tft.begin();
@@ -85,3 +85,38 @@ void setup()
 void loop(void)
 {
 }
+
+
+/*
+#include <FlexCAN_T4.h>
+FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> can2;
+static uint32_t timeout = millis();
+void setup() {
+  Serial.begin(9600);
+  Serial.println("ILI9341 Test!"); 
+  
+  can2.begin();
+  can2.setBaudRate(1000000);
+  can2.setMaxMB(16);
+  can2.enableFIFO();
+  can2.enableFIFOInterrupt();
+  can2.onReceive(canSniff);
+  can2.mailboxStatus();
+  }
+  
+  
+  void canSniff(const CAN_message_t &msg) {
+  Serial.print("MB "); Serial.print(msg.mb);
+  Serial.print("  OVERRUN: "); Serial.print(msg.flags.overrun);
+  Serial.print("  LEN: "); Serial.print(msg.len);
+  Serial.print(" EXT: "); Serial.print(msg.flags.extended);
+  Serial.print(" TS: "); Serial.print(msg.timestamp);
+  Serial.print(" ID: "); Serial.print(msg.id, HEX);
+  Serial.print(" Buffer: ");
+  for ( uint8_t i = 0; i < msg.len; i++ ) {
+    Serial.print(msg.buf[i], HEX); Serial.print(" ");
+  } Serial.println();
+
+  digitalWrite(LED_BUILTIN, HIGH);
+}
+  */
