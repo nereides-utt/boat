@@ -51,7 +51,22 @@ void appendFile(fs::FS &fs, const char * path, const char * message){
         Serial.println("Append failed");
     }
 }
-
+struct Batterie{
+    String courant;
+    String voltage;
+    String temperature;
+    String soc;
+    String santee;
+  };
+struct Donnee {
+    String vitesse;
+    String lat;
+    String lng;
+    Batterie bat1; 
+  };
+  struct Donnee donnee;
+  struct Batterie bat;
+  
 
 void setup() {
   USBSerial.begin(115200);
@@ -88,13 +103,63 @@ void setup() {
   writeFile(SD_MMC, "/hello.txt", "Hello ");
   appendFile(SD_MMC, "/hello.txt", "Wow!!");
   appendFile(SD_MMC, "/hello.txt", "World!\n");
-
+  
+  modifierDonnee("100","36.3432","23.2324","23","32","100","100","99");
+  sauvegarderDonnee("bellecouille");
 }
 
 void loop() {
 }
 
-//------------------------------------------------------------------------
+void sauvegarderDonnee(String nomFichier){
+  String nomCsv = "/" + nomFichier +".csv";
+  writeFile(SD_MMC,nomCsv.c_str(),"Vitesse,latitude,longitude,courantBat1,voltageBat1,temperatureBat1,socBat1,santeeBat1\n");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.vitesse.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.lat.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.lng.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.courant.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.voltage.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.temperature.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.soc.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.santee.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),"\n");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.vitesse.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.lat.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.lng.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.courant.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.voltage.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.temperature.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.soc.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),",");
+  appendFile(SD_MMC,nomCsv.c_str(),donnee.bat1.santee.c_str());
+  appendFile(SD_MMC,nomCsv.c_str(),"\n");
+}
+
+void modifierDonnee(String vitesse, String lat, String lng, String courant, String voltage, String temp, String soc, String santee){
+  donnee.vitesse=vitesse;
+  donnee.lat=lat;
+  donnee.lng=lng;
+
+  bat.courant=courant;
+  bat.voltage=voltage;
+  bat.temperature=temp;
+  bat.soc=soc;
+  bat.santee=santee;
+  donnee.bat1 = bat;
+}
 
 void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
   USBSerial.printf("Listing directory: %s\n", dirname);
