@@ -31,7 +31,7 @@ After cloning the repository, you need to open the workspace in VS Code that inc
 {
   "folders": [
     {
-      "path": "Code/hydrogen"
+      "path": "Code/energy"
     },
     {
       "path": "Code/mqtt"
@@ -42,7 +42,7 @@ After cloning the repository, you need to open the workspace in VS Code that inc
   ],
   "settings": {
     "platformio-ide.projectDirs": [
-      "Code/hydrogen",
+      "Code/energy",
       "Code/mqtt",
       "Code/cockpit"
     ]
