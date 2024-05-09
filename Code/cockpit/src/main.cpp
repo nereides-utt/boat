@@ -3,8 +3,8 @@
 #include "font_ArialBold.h"
 #include "font_Arial.h"
 #include "./../lib/drawCell/drawCell.hpp"
-
-// For the Adafruit shield, these are the default.
+// test
+//  For the Adafruit shield, these are the default.
 #define TFT_DC 9
 #define TFT_CS 10
 
@@ -23,7 +23,7 @@ static const int CELL_HIGHT = SCREEN_HEIGHT / ROWS;
 static const int HALF_CELL_HIGHT = CELL_HIGHT / 2;
 static const int COL[] = {0, CELL_WIDTH, CELL_WIDTH * 2, CELL_WIDTH * 3, CELL_WIDTH * 4, CELL_WIDTH * 6, CELL_WIDTH * 7};
 static const int ROW[] = {0, CELL_HIGHT, CELL_HIGHT * 2 - 2, CELL_HIGHT * 3 - 1, CELL_HIGHT * 4, CELL_HIGHT * 6, CELL_HIGHT * 7};
-//modif
+// modif
 void setup()
 {
   tft.begin();
@@ -37,8 +37,8 @@ void setup()
   tft.println("Waiting for Arduino Serial Monitor...");
 
   Serial.begin(9600);
-  //while (!Serial)
-    ; // wait for Arduino Serial Monitor
+  // while (!Serial)
+  ; // wait for Arduino Serial Monitor
   Serial.println("ILI9341 Test!");
 
   // read diagnostics (optional but can help debug problems)
@@ -66,7 +66,6 @@ void setup()
   drawCell(COL[2], ROW[3], 1, 1, ILI9341_RED, 21.8, "BT1", "°C");
   drawCell(COL[3], ROW[3], 1, 1, ILI9341_YELLOW, 21.8, "BAT2", "°C");
   drawCell(COL[0], ROW[2], 2, 1, ILI9341_YELLOW, 21.8, "ENG", "%", true);
-  
 
   // drawCell(COL[2], ROW[2],2,2, ILI9341_GREEN, 21.8, "MOT", "°C");
   //  drawCell(COL[1], ROW[3], ILI9341_GREEN, 31.7, "PAC", "°C");
@@ -87,15 +86,14 @@ void loop(void)
 {
 }
 
-
 /*
 #include <FlexCAN_T4.h>
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> can2;
 static uint32_t timeout = millis();
 void setup() {
   Serial.begin(9600);
-  Serial.println("ILI9341 Test!"); 
-  
+  Serial.println("ILI9341 Test!");
+
   can2.begin();
   can2.setBaudRate(1000000);
   can2.setMaxMB(16);
@@ -104,8 +102,8 @@ void setup() {
   can2.onReceive(canSniff);
   can2.mailboxStatus();
   }
-  
-  
+
+
   void canSniff(const CAN_message_t &msg) {
   Serial.print("MB "); Serial.print(msg.mb);
   Serial.print("  OVERRUN: "); Serial.print(msg.flags.overrun);
