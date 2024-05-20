@@ -2,12 +2,13 @@
 #include "font_ArialBold.h"
 #include "font_Arial.h"
 #include "Arduino.h"
+#include "../flickerFree/FlickerFreePrint.h"
 
 extern ILI9341_t3 tft; // Reference the external 'tft' object
 
 void clearCell(uint8_t x, uint8_t y)
 {
-    uint8_t height = 60;
+    uint8_t height = 58;
     uint8_t width = 79;
     tft.fillRect(x, y, width, height, ILI9341_BLACK);
 }
@@ -23,22 +24,22 @@ void drawGauge(uint8_t x, uint8_t y, uint8_t percentage, int16_t mainColor)
     tft.fillRoundRect(x, y, (width * percentage) / 100, height, 5, mainColor);
 }
 
-void drawCell(uint8_t x, uint8_t y, uint8_t xSize, uint8_t ySize, int16_t mainColor, float value, String label, String unit, bool gauge = false)
+void drawCell(uint8_t x, uint8_t y, uint8_t xSize, uint8_t ySize, int16_t bgColor, int16_t textColor, String label, String unit)
 {
     // Implementation
 
-    u_int16_t height = 60;
+    u_int16_t height = 58;
     u_int16_t width = 79;
     bool isBig = false;
 
     switch (ySize)
     {
     case 1:
-        height = 60;
+        height = 58;
         break;
 
     case 2:
-        height = 120;
+        height = 118;
         isBig = true;
         break;
 
@@ -81,37 +82,51 @@ void drawCell(uint8_t x, uint8_t y, uint8_t xSize, uint8_t ySize, int16_t mainCo
         break;
     }
 
-    tft.drawRoundRect(x, y, width, height, 5, mainColor);
-    tft.drawRoundRect(x, y + 1, width, height, 5, mainColor);
-    tft.drawRoundRect(x + 1, y, width, height, 5, mainColor);
+    // tft.drawRect(x, y, width, height, mainColor);
+    // tft.drawRect(x+1, y + 1, width-2, height-2, mainColor);
+    tft.fillRect(x, y, width - 1, height, bgColor);
     tft.setCursor(x + 8, y + 7);
-    tft.setTextColor(mainColor);
+    tft.setTextColor(textColor);
     tft.setTextSize(1);
-    tft.setFont(Arial_10);
+    tft.setFont(Arial_8_Bold);
     tft.println(label);
+}
+
+void displayData(FlickerFreePrint<ILI9341_t3> &data, uint8_t x, uint8_t y, int16_t bgColor, int16_t textColor, float value, u_int8_t decimals, String unit, bool boolean = false)
+{
+
     tft.setCursor(x + 8, y + 30);
-    tft.setTextColor(mainColor);
+    tft.setTextColor(textColor);
     tft.setTextSize(3);
     tft.setFont(Arial_24_Bold);
-    tft.println(value, 1);
-    if (isBig)
+    if (boolean)
     {
-        tft.setCursor(x + 75, y + 30);
-        tft.setTextColor(mainColor);
-        tft.setTextSize(3);
-        tft.setFont(Arial_24_Bold);
-        tft.println(unit);
+        if (value == 1)
+        {
+            tft.setCursor(x + 14, y + 25);
+            tft.println("ON");
+        }
+        else
+        {
+            tft.setCursor(x + 6, y + 25);
+            tft.println("OFF");
+        }
     }
     else
     {
-        tft.setTextSize(1);
-        tft.setFont(Arial_10);
-        tft.setCursor(x + 65, y + 7);
-        tft.println(unit);
-    }
-    if (gauge)
-    {
-        drawGauge(x + 50, y + 7, value, ILI9341_YELLOW);
+        if (1 == 0)
+        {
+
+            // tft.println(String(value) + unit);
+            data.setTextColor(textColor, bgColor);
+            data.print(value, decimals);
+        }
+        else
+        {
+
+            data.setTextColor(textColor, bgColor);
+            data.print(value, decimals);
+        }
     }
 }
 
@@ -123,6 +138,7 @@ void drawDoubleCell(uint8_t x, uint8_t y, int16_t mainColor, float value, String
     u_int8_t width = 159;
     // u_int8_t padding = 20;
     // u_int8_t borderSize = 2;
+
     tft.drawRoundRect(x, y, width, height, 5, mainColor);
     tft.drawRoundRect(x, y + 1, width, height, 5, mainColor);
     tft.drawRoundRect(x + 1, y, width, height, 5, mainColor);
