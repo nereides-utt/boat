@@ -8,6 +8,10 @@
         },
         {
             "path": "Code/cockpit"
+        },
+        {
+            "name": "telemetry",
+            "path": "Code/telemetry/telemetry"
         }
     ],
     "settings": {
