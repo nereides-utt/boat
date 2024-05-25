@@ -6,6 +6,7 @@
 #include "./../lib/flickerFree/FlickerFreePrint.h"
 
 #include <FlexCAN_T4.h>
+#include <Bounce2.h>
 
 // setup the CAN BUS using the in-built CAN2
 FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> can2;
@@ -13,8 +14,13 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> can2;
 // For the Adafruit shield, these are the default.
 #define TFT_DC 9
 #define TFT_CS 10
+#define TFT2_CS 8
 
 #define DEBUG 1
+
+// Define Pushbutton for Teensy
+#define BUTTON_1 6
+Bounce pushButton = Bounce(BUTTON_1, 10);
 
 // CAN message ID
 #define MOTOR_CONTROLLER_STATUS_1 0x0CF11E05
@@ -24,6 +30,7 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> can2;
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
 ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC);
+ILI9341_t3 tft2 = ILI9341_t3(TFT2_CS, TFT_DC);
 
 FlickerFreePrint<ILI9341_t3> motor_rpm_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 FlickerFreePrint<ILI9341_t3> motor_voltage_v_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
@@ -184,8 +191,9 @@ void updateScreen()
 {
   if (old_data.motor_rpm != new_data.motor_rpm)
   {
-    displayData(motor_rpm_data, COL[0], ROW[0], ILI9341_BLUE, ILI9341_WHITE, new_data.motor_rpm, 0, "");
+    displayData(motor_rpm_data, COL[0], ROW[0], ILI9341_ORANGE, ILI9341_WHITE, new_data.motor_rpm, 0, "");
     old_data.motor_rpm = new_data.motor_rpm;
+    displayData(motor_rpm_data, COL[0], ROW[1], ILI9341_ORANGE, ILI9341_BLACK, new_data.motor_rpm, 0, "");
   }
 }
 void setup()
@@ -213,6 +221,17 @@ void setup()
   tft.fillScreen(ILI9341_BLACK);
   tft.setTextColor(ILI9341_YELLOW);
   tft.setTextSize(2);
+
+  tft2.begin();
+  // Note: you can now set the SPI speed to any value
+  // the default value is 30Mhz, but most ILI9341 displays
+  // can handle at least 60Mhz and as much as 100Mhz
+  //  tft.setClock(60000000);
+
+  tft2.setRotation(3);
+  tft2.fillScreen(ILI9341_BLACK);
+  tft2.setTextColor(ILI9341_YELLOW);
+  tft2.setTextSize(2);
 
   Serial.begin(9600);
   // if (DEBUG)
@@ -243,29 +262,39 @@ void setup()
     Serial.println(x, HEX);
   }
 
-  drawCell(COL[0], ROW[0], 1, 1, ILI9341_BLUE, ILI9341_WHITE, "RPM", "");
-  drawCell(COL[1], ROW[0], 1, 2, ILI9341_BLUE, ILI9341_WHITE, "RPM", "");
-  drawCell(COL[0], ROW[1], 1, 1, ILI9341_BLUE, ILI9341_WHITE, "MOTOR", "");
-  drawCell(COL[0], ROW[2], 1, 1, ILI9341_BLUE, ILI9341_WHITE, "MOTOR", "");
-  drawCell(COL[0], ROW[3], 1, 1, ILI9341_BLUE, ILI9341_WHITE, "MOTOR", "");
+  drawCell(COL[0], ROW[0], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "RPM", "");
+  drawCell(COL[1], ROW[0], 1, 2, ILI9341_ORANGE, ILI9341_WHITE, "RPM", "");
+  drawCell(COL[0], ROW[1], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "MOTOR", "");
+  drawCell(COL[0], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "MOTOR", "");
+  drawCell(COL[0], ROW[3], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "MOTOR", "");
   drawCell(COL[1], ROW[3], 1, 1, ILI9341_PURPLE, ILI9341_WHITE, "PAC", "");
   drawCell(COL[2], ROW[3], 1, 1, ILI9341_GREEN, ILI9341_WHITE, "BATTERY", "");
-  drawCell(COL[3], ROW[3], 1, 1, ILI9341_BLUE, ILI9341_WHITE, "CONTROL.", "");
-  drawCell(COL[0], ROW[2], 1, 1, ILI9341_BLUE, ILI9341_WHITE, "AMD H2", "");
-  drawCell(COL[1], ROW[2], 1, 1, ILI9341_BLUE, ILI9341_WHITE, "AMD H2", "");
-  drawCell(COL[2], ROW[0], 2, 1, ILI9341_BLUE, ILI9341_WHITE, "BAT. V", " V");
-  drawCell(COL[2], ROW[1], 2, 1, ILI9341_BLUE, ILI9341_WHITE, "BAT. A", " A");
-  drawCell(COL[2], ROW[2], 2, 1, ILI9341_BLUE, ILI9341_WHITE, "PUISSANCE", " W");
+  drawCell(COL[3], ROW[3], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "CONTROL.", "");
+  drawCell(COL[0], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "AMD H2", "");
+  drawCell(COL[1], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "AMD H2", "");
+  drawCell(COL[2], ROW[0], 2, 1, ILI9341_ORANGE, ILI9341_WHITE, "BAT. V", " V");
+  drawCell(COL[2], ROW[1], 2, 1, ILI9341_ORANGE, ILI9341_WHITE, "BAT. A", " A");
+  drawCell(COL[2], ROW[2], 2, 1, ILI9341_ORANGE, ILI9341_WHITE, "PUISSANCE", " W");
 
+  pinMode(BUTTON_1, INPUT_PULLUP);
   delay(10);
 }
 int interval = 5000;
 unsigned long previousTime = 0, currentTime = 0;
 bool flag = false;
-
+int count = 0;
 void loop(void)
 {
 
+  if (pushButton.update())
+  {
+    if (pushButton.fallingEdge())
+    {
+      count = count + 1;
+
+      Serial.println(count);
+    }
+  }
   // generate random values every 5s
   currentTime = millis();
   if (currentTime - previousTime > interval)
@@ -284,9 +313,13 @@ void loop(void)
   }
   can2.events();
   updateScreen();
-  delay(40);
+  tft2.fillRect(0, 0, 200, 200, ILI9341_CYAN);
 
-  // displayData(motor_rpm_data, COL[0], ROW[0], ILI9341_BLUE, ILI9341_WHITE, 1248, 0, "");
-  // displayData(motor_temp_data, COL[0], ROW[3], ILI9341_BLUE, ILI9341_WHITE, 21.4, 1, "");
-  // displayData(motor_controller_temp_data, COL[3], ROW[3], ILI9341_BLUE, ILI9341_WHITE, 20.8, 1, "");
+  tft2.fillRect(0, 0, 200, 200, ILI9341_RED);
+
+  Serial.println("test");
+
+  // displayData(motor_rpm_data, COL[0], ROW[0], ILI9341_ORANGE, ILI9341_WHITE, 1248, 0, "");
+  // displayData(motor_temp_data, COL[0], ROW[3], ILI9341_ORANGE, ILI9341_WHITE, 21.4, 1, "");
+  // displayData(motor_controller_temp_data, COL[3], ROW[3], ILI9341_ORANGE, ILI9341_WHITE, 20.8, 1, "");
 }
