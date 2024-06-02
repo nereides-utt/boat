@@ -43,7 +43,7 @@ typedef struct PAC_errors
   uint8_t erreur_mineure;
   uint8_t alerte_h2;
 }PAC_FLAGS;
-//structure des données venant de la PAC
+//structure des données venant de la PAC1
  struct PAC_data
 {
   uint16_t amperage;
