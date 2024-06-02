@@ -13,7 +13,7 @@ static const uint8_t PAC_emergency_stop = 1;
 static const uint8_t PAC_stop = 1;
 static const uint8_t PAC_start = 1;
 
-
+//ID CAN venant de la PAC
 #define PAC_KEEP_ALIVE 0x2fc1000
 #define PAC_ORDER 0x2fc1001
 
@@ -23,7 +23,7 @@ static const uint8_t PAC_start = 1;
 #define PAC_TIME_ENERGY1 0x2fc0003
 #define PAC_TIME_ENERGY2 0x2fc0004
 
-
+//structure pour les messages d'erreurs contenus dans  des bits 
 typedef struct PAC_errors
 {
   uint8_t erreur_interne;
@@ -36,14 +36,14 @@ typedef struct PAC_errors
   uint8_t tension_auxiliaire;
   uint8_t erreur_ventilateur;
 }errors;
-
+//structure pour les flags contenus dans  des bits 
  typedef struct PAC_FLAGS
 {
   uint8_t erreur_critique;
   uint8_t erreur_mineure;
   uint8_t alerte_h2;
 }PAC_FLAGS;
-
+//structure des données venant de la PAC
  struct PAC_data
 {
   uint16_t amperage;
@@ -59,7 +59,7 @@ typedef struct PAC_errors
   uint16_t energy_prod2;
 }PAC_data;
 
-
+//focntion updapte valeur des données  venant de la PAC
 void canSniff(const CAN_message_t &msg)
 {
 
