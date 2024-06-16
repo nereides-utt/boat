@@ -22,22 +22,41 @@ FlexCAN_T4<CAN2, RX_SIZE_256, TX_SIZE_16> can2;
 #define BUTTON_1 6
 Bounce pushButton = Bounce(BUTTON_1, 10);
 
-// CAN message ID
+// CAN message ID -- Motor
 #define MOTOR_CONTROLLER_STATUS_1 0x0CF11E05
 #define MOTOR_CONTROLLER_STATUS_2 0x0CF11F05
+
+// CAN message ID -- Battery
 #define BATTERY_STATUS_1 0x12C21020
-#define BATTERY_STATUS_2 0x0CF11F05
+#define BATTERY_STATUS_2 0x12C21021
+
+// CAN message ID -- Fuel Cell
+#define PAC_START_STOP 0x2FC1001
+#define PAC_KEEP_ALIVE 0x2FC1000
+#define PAC_A_V 0x2FC0001          // every 100ms
+#define PAC_SYSTEM_INFOS 0x2FC0000 // every 100ms
+#define PAC_SYSTEM_ERRORS 0x2FC0002
+#define PAC_TIME_ENERGY_1 0x2FC0003 // every 100ms
+#define PAC_TIME_ENERGY_2 0x2FC0004 // every 100ms
 
 // Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
 ILI9341_t3 tft = ILI9341_t3(TFT_CS, TFT_DC);
 ILI9341_t3 tft2 = ILI9341_t3(TFT2_CS, TFT_DC);
 
+FlickerFreePrint<ILI9341_t3> boat_speed_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
+
+FlickerFreePrint<ILI9341_t3> motor_CAN_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 FlickerFreePrint<ILI9341_t3> motor_rpm_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 FlickerFreePrint<ILI9341_t3> motor_voltage_v_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 FlickerFreePrint<ILI9341_t3> motor_current_a_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 FlickerFreePrint<ILI9341_t3> motor_throttle_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 FlickerFreePrint<ILI9341_t3> motor_temp_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 FlickerFreePrint<ILI9341_t3> motor_controller_temp_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
+FlickerFreePrint<ILI9341_t3> battery_CAN_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
+FlickerFreePrint<ILI9341_t3> battery_voltage_v_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
+FlickerFreePrint<ILI9341_t3> battery_current_a_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
+FlickerFreePrint<ILI9341_t3> battery_soc_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
+FlickerFreePrint<ILI9341_t3> battery_soh_data(&tft, ILI9341_BLACK, ILI9341_WHITE);
 
 #define C_BLACK 0x0000
 #define C_BLUE 0x001F
@@ -47,6 +66,9 @@ FlickerFreePrint<ILI9341_t3> motor_controller_temp_data(&tft, ILI9341_BLACK, ILI
 #define C_MAGENTA 0xF81F
 #define C_YELLOW 0xFFE0
 #define C_WHITE 0xFFFF
+
+#define BACKGROUND_COLOR ILI9341_BLACK
+#define TEXT_COLOR ILI9341_WHITE
 
 // Define screen grid
 static const int SCREEN_WIDTH = 320;
@@ -64,26 +86,48 @@ static const int ROW[] = {0, 60, 120, 180, CELL_HEIGHT * 4, CELL_HEIGHT * 6, CEL
 // static const int COL[] = {0, CELL_WIDTH , CELL_WIDTH * 2, CELL_WIDTH * 3, CELL_WIDTH * 4, CELL_WIDTH * 6, CELL_WIDTH * 7};
 // static const int ROW[] = {0, CELL_HEIGHT, CELL_HEIGHT * 2, CELL_HEIGHT * 3, CELL_HEIGHT * 4, CELL_HEIGHT * 6, CELL_HEIGHT * 7};
 
-// Motor
+unsigned long last_received_battery_CAN, last_received_motor_CAN, last_received_PAC_CAN;
 
 struct data_layout
 {
+  // boat
+  u_int8_t boat_speed = -1;
+
   // Motor
-  int motor_current_a;
-  int motor_voltage_v;
-  int motor_rpm;
-  int motor_throttle;
-  int motor_temp;
-  int motor_controller_temp;
-  int motor_error_code;
-  int motor_controller_status;
-  int motor_switch_signals_status;
+  bool motor_CAN = 0;
+  int motor_current_a = -1;
+  int motor_voltage_v = -1;
+  int motor_rpm = -1;
+  int motor_throttle = -1;
+  int motor_temp = -1;
+  int motor_controller_temp = -1;
+  int motor_error_code = 0;
+  int motor_controller_status = 0;
+  int motor_switch_signals_status = 0;
 
   // Battery
-  u_int16_t battery_voltage_v;
-  int16_t battery_current_a;
-  u_int16_t battery_soc;
-  u_int16_t battery_soh;
+  bool battery_CAN = 0;
+  u_int16_t battery_voltage_v = -1;
+  int16_t battery_current_a = -1;
+  u_int16_t battery_soc = -1;
+  u_int16_t battery_soh = -1;
+
+  // Fuel Cell
+  u_int8_t pac_emergency_stop = 0;
+  u_int8_t pac_start = 0;
+  u_int8_t pac_stop = 0;
+  float pac_current_a = 0;
+  float pac_voltage_v = 0;
+  u_int8_t pac_system_state = 0;
+  u_int8_t pac_error_flag = 0;
+  u_int8_t pac_hydrogen_consumption_mgs = 0;
+  u_int8_t pac_temperature_c = 0;
+  u_int8_t pac_system_errors = 0;
+  u_int8_t pac_fan_error = 0;
+  u_int16_t pac_operation_time = 0;
+  u_int16_t pac_produced_energy = 0;
+  u_int16_t pac_total_operation_time = 0;
+  u_int16_t pac_total_produced_energy = 0;
 };
 
 data_layout old_data;
@@ -91,109 +135,206 @@ data_layout new_data;
 
 void canSniff(const CAN_message_t &msg)
 {
-  //   if (DEBUG)
-  //   {
-  //     Serial.print("MB ");
-  //     Serial.print(msg.mb);
-  //     Serial.print("  OVERRUN: ");
-  //     Serial.print(msg.flags.overrun);
-  //     Serial.print("  LEN: ");
-  //     Serial.print(msg.len);
-  //     Serial.print(" EXT: ");
-  //     Serial.print(msg.flags.extended);
-  //     Serial.print(" TS: ");
-  //     Serial.print(msg.timestamp);
-  //     Serial.print(" ID: ");
-  //     Serial.print(msg.id, HEX);
-  //     Serial.print(" Buffer: ");
-  //     for (uint8_t i = 0; i < msg.len; i++)
-  //     {
-  //       Serial.print(msg.buf[i], HEX);
-  //       Serial.print(" ");
-  //     }
-  //     Serial.println();
-  //   }
+  if (DEBUG)
+  {
+    Serial.print("MB ");
+    Serial.print(msg.mb);
+    Serial.print("  OVERRUN: ");
+    Serial.print(msg.flags.overrun);
+    Serial.print("  LEN: ");
+    Serial.print(msg.len);
+    Serial.print(" EXT: ");
+    Serial.print(msg.flags.extended);
+    Serial.print(" TS: ");
+    Serial.print(msg.timestamp);
+    Serial.print(" ID: ");
+    Serial.print(msg.id, HEX);
+    Serial.print(" Buffer: ");
+    for (uint8_t i = 0; i < msg.len; i++)
+    {
+      Serial.print(msg.buf[i], HEX);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
+  if (msg.id == 0x666)
+  {
+    Serial.println("BOAT SPEED RECEIVED");
+    new_data.boat_speed = (u_int8_t)msg.buf[0];
+  }
 
-  //   // Handle power and errors
-  //   if (msg.id == MOTOR_CONTROLLER_STATUS_1 && msg.len == 8)
-  //   {
-  //     motor_rpm = ((uint16_t)msg.buf[1] << 8) | msg.buf[0];        // speed in RPM
-  //     motor_current_a = ((int16_t)msg.buf[3] << 8) | msg.buf[2];   // current in 0.1A/bit
-  //     motor_voltage_v = ((uint16_t)msg.buf[5] << 8) | msg.buf[4];  // voltage in 0.1V/bit
-  //     motor_error_code = ((uint16_t)msg.buf[7] << 8) | msg.buf[6]; // error code
+  // Handle power and errors
+  if (msg.id == MOTOR_CONTROLLER_STATUS_1 && msg.len == 8)
+  {
+    Serial.println("MOTOR_CONTROLLER_STATUS_1 RECEIVED");
+    new_data.motor_rpm = ((uint16_t)msg.buf[1] << 8) | msg.buf[0];        // speed in RPM
+    new_data.motor_current_a = ((int16_t)msg.buf[3] << 8) | msg.buf[2];   // current in 0.1A/bit
+    new_data.motor_voltage_v = ((uint16_t)msg.buf[5] << 8) | msg.buf[4];  // voltage in 0.1V/bit
+    new_data.motor_error_code = ((uint16_t)msg.buf[7] << 8) | msg.buf[6]; // error code
 
-  //     motor_current_a / 10;   // Convert to A
-  //     motor_voltage_v / 10.0; // Convert to V
+    new_data.motor_current_a / 10;   // Convert to A
+    new_data.motor_voltage_v / 10.0; // Convert to V
+    last_received_motor_CAN = millis();
+    new_data.motor_CAN = 1;
 
-  //     if (DEBUG)
-  //     {
-  //       Serial.print("Speed (RPM): ");
-  //       Serial.println(motor_rpm);
-  //       Serial.print("Current (A): ");
-  //       Serial.println(motor_current_a);
-  //       Serial.print("Voltage (V): ");
-  //       Serial.println(motor_voltage_v);
-  //       Serial.print("Error Code: ");
-  //       Serial.println(motor_error_code, HEX);
-  //     }
-  //   }
+    if (DEBUG)
+    {
+      Serial.print("Speed (RPM): ");
+      Serial.println(new_data.motor_rpm);
+      Serial.print("Current (A): ");
+      Serial.println(new_data.motor_current_a);
+      Serial.print("Voltage (V): ");
+      Serial.println(new_data.motor_voltage_v);
+      Serial.print("Error Code: ");
+      Serial.println(new_data.motor_error_code, HEX);
+    }
+  }
 
-  //   // Handle throttle signal and temperatures
-  //   if (msg.id == MOTOR_CONTROLLER_STATUS_2 && msg.len == 8)
-  //   {
-  //     motor_throttle = msg.buf[0];
-  //     motor_controller_temp = msg.buf[1] - 40; // Convert using offset
-  //     motor_temp = msg.buf[2] - 30;            // Convert using offset
+  // Handle throttle signal and temperatures
+  if (msg.id == MOTOR_CONTROLLER_STATUS_2 && msg.len == 8)
+  {
+    Serial.println("MOTOR_CONTROLLER_STATUS_2 RECEIVED");
+    new_data.motor_throttle = msg.buf[0];
+    new_data.motor_controller_temp = msg.buf[1] - 40; // Convert using offset
+    new_data.motor_temp = msg.buf[2] - 30;            // Convert using offset
+    last_received_motor_CAN = millis();
+    new_data.motor_CAN = 1;
+    if (DEBUG)
+    {
+      Serial.print("Throttle Signal (0-255): ");
+      Serial.println(new_data.motor_throttle);
+      Serial.print("Controller Temp (°C): ");
+      Serial.println(new_data.motor_controller_temp);
+      Serial.print("Motor Temp (°C): ");
+      Serial.println(new_data.motor_temp);
+    }
+  }
 
-  //     if (DEBUG)
-  //     {
-  //       Serial.print("Throttle Signal (0-255): ");
-  //       Serial.println(motor_throttle);
-  //       Serial.print("Controller Temp (°C): ");
-  //       Serial.println(motor_controller_temp);
-  //       Serial.print("Motor Temp (°C): ");
-  //       Serial.println(motor_temp);
-  //     }
-  //   }
+  if (msg.id == BATTERY_STATUS_1 && msg.len >= 8)
+  {
+    // Replace YOUR_EXPECTED_CAN_ID with the specific CAN ID you're interested in
+    Serial.println("BATTERY _STATUS_1 RECEIVED");
+    new_data.battery_voltage_v = ((uint16_t)msg.buf[1] << 8) | msg.buf[0];
+    new_data.battery_current_a = ((int16_t)msg.buf[3] << 8) | msg.buf[2];
+    new_data.battery_soc = ((uint16_t)msg.buf[5] << 8) | msg.buf[4];
+    new_data.battery_soh = ((uint16_t)msg.buf[7] << 8) | msg.buf[6];
 
-  //   if (msg.id == BATTERY_STATUS_1 && msg.len >= 8)
-  //   {
-  //     // Replace YOUR_EXPECTED_CAN_ID with the specific CAN ID you're interested in
+    new_data.battery_current_a = new_data.battery_current_a * 10;     // Convert to mA
+    new_data.battery_soc = new_data.battery_soc / 100.0;              // Convert to percentage
+    new_data.battery_soh = new_data.battery_soh / 100.0;              // Convert to percentage
+    new_data.battery_voltage_v = new_data.battery_voltage_v / 1000.0; // Convert to percentage
+    last_received_battery_CAN = millis();
+    new_data.battery_CAN = 1;
 
-  //     battery_voltage_v = ((uint16_t)msg.buf[1] << 8) | msg.buf[0];
-  //     battery_current_a = ((int16_t)msg.buf[3] << 8) | msg.buf[2];
-  //     battery_soc = ((uint16_t)msg.buf[5] << 8) | msg.buf[4];
-  //     battery_soh = ((uint16_t)msg.buf[7] << 8) | msg.buf[6];
+    if (DEBUG)
+    {
+      Serial.print("Voltage (mV): ");
+      Serial.println(new_data.battery_voltage_v);
+      Serial.print("Current (mA): ");
+      Serial.println(new_data.battery_current_a);
+      Serial.print("SOC (%): ");
+      Serial.println(new_data.battery_soc);
+      Serial.print("SOH (%): ");
+      Serial.println(new_data.battery_soh);
+    }
+  }
 
-  //     int current_mA = battery_current_a * 10;      // Convert to mA
-  //     float soc_percentage = battery_soc / 100.0;   // Convert to percentage
-  //     float soh_percentage = battery_soh / 100.0;   // Convert to percentage
-  //     float voltage_v = battery_voltage_v / 1000.0; // Convert to percentage
-
-  //     if (DEBUG)
-  //     {
-  //       Serial.print("Voltage (mV): ");
-  //       Serial.println(voltage_v);
-  //       Serial.print("Current (mA): ");
-  //       Serial.println(current_mA);
-  //       Serial.print("SOC (%): ");
-  //       Serial.println(soc_percentage);
-  //       Serial.print("SOH (%): ");
-  //       Serial.println(soh_percentage);
-  //     }
-  //   }
-
-  //   digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LED_BUILTIN, HIGH);
 }
+// check if CAN data is received
+void checkCAN()
+{
+  // check last received motor CAN message
+  if (millis() - last_received_motor_CAN > 1500)
+  {
+    new_data.motor_CAN = 0;
+    new_data.motor_controller_temp = 0;
+    new_data.motor_throttle = 0;
+    new_data.motor_rpm = 0;
+    new_data.motor_temp = 0;
+  }
+
+  // check last received battery CAN message
+  if (millis() - last_received_battery_CAN > 1500)
+  {
+    new_data.battery_CAN = 0;
+    new_data.battery_current_a = 0;
+    new_data.battery_soc = 0;
+    new_data.battery_soh = 0;
+    new_data.battery_voltage_v = 0;
+  }
+};
 
 // update the screen value only if they changed
 void updateScreen()
 {
+  // boat data
+  if (old_data.boat_speed != new_data.boat_speed)
+  {
+    old_data.boat_speed = new_data.boat_speed;
+    displayData(boat_speed_data, COL[0], ROW[1], BACKGROUND_COLOR, TEXT_COLOR, new_data.boat_speed, 0, "", 60);
+  }
+
+  // motor data
+  if (old_data.motor_CAN != new_data.motor_CAN)
+  {
+    old_data.motor_CAN = new_data.motor_CAN;
+    displayData(motor_CAN_data, COL[3], ROW[0], BACKGROUND_COLOR, TEXT_COLOR, new_data.motor_CAN, 0, "");
+  }
+
   if (old_data.motor_rpm != new_data.motor_rpm)
   {
-    displayData(motor_rpm_data, COL[0], ROW[0], ILI9341_ORANGE, ILI9341_WHITE, new_data.motor_rpm, 0, "");
     old_data.motor_rpm = new_data.motor_rpm;
-    displayData(motor_rpm_data, COL[0], ROW[1], ILI9341_ORANGE, ILI9341_BLACK, new_data.motor_rpm, 0, "");
+    displayData(motor_rpm_data, COL[2], ROW[1], BACKGROUND_COLOR, TEXT_COLOR, new_data.motor_rpm, 0, "");
+  }
+
+  if (old_data.motor_temp != new_data.motor_temp)
+  {
+    old_data.motor_temp = new_data.motor_temp;
+    displayData(motor_temp_data, COL[0], ROW[3], BACKGROUND_COLOR, TEXT_COLOR, new_data.motor_temp, 1, "");
+  }
+
+  if (old_data.motor_controller_temp != new_data.motor_controller_temp)
+  {
+    old_data.motor_controller_temp = new_data.motor_controller_temp;
+    displayData(motor_controller_temp_data, COL[1], ROW[3], BACKGROUND_COLOR, TEXT_COLOR, new_data.motor_controller_temp, 1, "");
+  }
+
+  if (old_data.motor_throttle != new_data.motor_throttle)
+  {
+    old_data.motor_throttle = new_data.motor_throttle;
+    displayData(motor_throttle_data, COL[3], ROW[1], BACKGROUND_COLOR, TEXT_COLOR, new_data.motor_throttle, 0, "");
+  }
+
+  // battery data
+
+  if (old_data.battery_CAN != new_data.battery_CAN)
+  {
+    old_data.battery_CAN = new_data.battery_CAN;
+    displayData(battery_CAN_data, COL[2], ROW[0], BACKGROUND_COLOR, TEXT_COLOR, new_data.battery_CAN, 0, "");
+    new_data.battery_CAN = 1;
+  }
+
+  if (old_data.battery_current_a != new_data.battery_current_a)
+  {
+    old_data.battery_current_a = new_data.battery_current_a;
+    displayData(battery_current_a_data, COL[0], ROW[2], BACKGROUND_COLOR, TEXT_COLOR, new_data.battery_current_a, 0, "");
+  }
+  if (old_data.battery_voltage_v != new_data.battery_voltage_v)
+  {
+    old_data.battery_voltage_v = new_data.battery_voltage_v;
+    displayData(battery_voltage_v_data, COL[1], ROW[2], BACKGROUND_COLOR, TEXT_COLOR, new_data.battery_voltage_v, 1, "");
+  }
+  if (old_data.battery_soc != new_data.battery_soc)
+  {
+    old_data.battery_soc = new_data.battery_soc;
+    displayData(battery_soc_data, COL[2], ROW[2], BACKGROUND_COLOR, TEXT_COLOR, new_data.battery_soc, 1, "");
+  }
+
+  if (old_data.battery_soh != new_data.battery_soh)
+  {
+    old_data.battery_soh = new_data.battery_soh;
+    displayData(battery_soh_data, COL[3], ROW[2], BACKGROUND_COLOR, TEXT_COLOR, new_data.battery_soh, 0, "");
   }
 }
 void setup()
@@ -218,8 +359,8 @@ void setup()
   //  tft.setClock(60000000);
 
   tft.setRotation(3);
-  tft.fillScreen(ILI9341_BLACK);
-  tft.setTextColor(ILI9341_YELLOW);
+  tft.fillScreen(ILI9341_WHITE);
+  tft.setTextColor(TEXT_COLOR);
   tft.setTextSize(2);
 
   tft2.begin();
@@ -229,8 +370,8 @@ void setup()
   //  tft.setClock(60000000);
 
   tft2.setRotation(3);
-  tft2.fillScreen(ILI9341_BLACK);
-  tft2.setTextColor(ILI9341_YELLOW);
+  tft2.fillScreen(ILI9341_WHITE);
+  tft2.setTextColor(TEXT_COLOR);
   tft2.setTextSize(2);
 
   Serial.begin(9600);
@@ -243,38 +384,40 @@ void setup()
   // }
 
   // read diagnostics (optional but can help debug problems)
-  if (DEBUG)
-  {
-    uint8_t x = tft.readcommand8(ILI9341_RDMODE);
-    Serial.print("Display Power Mode: 0x");
-    Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDMADCTL);
-    Serial.print("MADCTL Mode: 0x");
-    Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDPIXFMT);
-    Serial.print("Pixel Format: 0x");
-    Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDIMGFMT);
-    Serial.print("Image Format: 0x");
-    Serial.println(x, HEX);
-    x = tft.readcommand8(ILI9341_RDSELFDIAG);
-    Serial.print("Self Diagnostic: 0x");
-    Serial.println(x, HEX);
-  }
+  // if (DEBUG)
+  // {
+  //   uint8_t x = tft.readcommand8(ILI9341_RDMODE);
+  //   Serial.print("Display Power Mode: 0x");
+  //   Serial.println(x, HEX);
+  //   x = tft.readcommand8(ILI9341_RDMADCTL);
+  //   Serial.print("MADCTL Mode: 0x");
+  //   Serial.println(x, HEX);
+  //   x = tft.readcommand8(ILI9341_RDPIXFMT);
+  //   Serial.print("Pixel Format: 0x");
+  //   Serial.println(x, HEX);
+  //   x = tft.readcommand8(ILI9341_RDIMGFMT);
+  //   Serial.print("Image Format: 0x");
+  //   Serial.println(x, HEX);
+  //   x = tft.readcommand8(ILI9341_RDSELFDIAG);
+  //   Serial.print("Self Diagnostic: 0x");
+  //   Serial.println(x, HEX);
+  // }
 
-  drawCell(COL[0], ROW[0], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "RPM", "");
-  drawCell(COL[1], ROW[0], 1, 2, ILI9341_ORANGE, ILI9341_WHITE, "RPM", "");
-  drawCell(COL[0], ROW[1], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "MOTOR", "");
-  drawCell(COL[0], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "MOTOR", "");
-  drawCell(COL[0], ROW[3], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "MOTOR", "");
-  drawCell(COL[1], ROW[3], 1, 1, ILI9341_PURPLE, ILI9341_WHITE, "PAC", "");
-  drawCell(COL[2], ROW[3], 1, 1, ILI9341_GREEN, ILI9341_WHITE, "BATTERY", "");
-  drawCell(COL[3], ROW[3], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "CONTROL.", "");
-  drawCell(COL[0], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "AMD H2", "");
-  drawCell(COL[1], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "AMD H2", "");
-  drawCell(COL[2], ROW[0], 2, 1, ILI9341_ORANGE, ILI9341_WHITE, "BAT. V", " V");
-  drawCell(COL[2], ROW[1], 2, 1, ILI9341_ORANGE, ILI9341_WHITE, "BAT. A", " A");
-  drawCell(COL[2], ROW[2], 2, 1, ILI9341_ORANGE, ILI9341_WHITE, "PUISSANCE", " W");
+  drawCell(COL[2], ROW[0], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "CAN BAT.", "");
+  drawCell(COL[3], ROW[0], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "CAN MOT", "");
+  drawCell(COL[0], ROW[0], 2, 2, BACKGROUND_COLOR, TEXT_COLOR, "SPEED", "");
+  drawCell(COL[2], ROW[1], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "RPM", "");
+  drawCell(COL[3], ROW[1], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "THROTTLE", "");
+  drawCell(COL[0], ROW[2], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "BAT. A", "");
+  drawCell(COL[1], ROW[2], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "BAT. V", "");
+  drawCell(COL[2], ROW[2], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "SOC", "");
+  drawCell(COL[3], ROW[2], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "SOH", "");
+  drawCell(COL[0], ROW[3], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "MOTOR T", "%");
+  drawCell(COL[1], ROW[3], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "CTRL T", "");
+  drawCell(COL[2], ROW[3], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "BAT. T", "");
+  drawCell(COL[3], ROW[3], 1, 1, BACKGROUND_COLOR, TEXT_COLOR, "PAC T", "");
+  // drawCell(COL[0], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "AMD H2", "");
+  // drawCell(COL[1], ROW[2], 1, 1, ILI9341_ORANGE, ILI9341_WHITE, "AMD H2", "");
 
   pinMode(BUTTON_1, INPUT_PULLUP);
   delay(10);
@@ -283,41 +426,42 @@ int interval = 5000;
 unsigned long previousTime = 0, currentTime = 0;
 bool flag = false;
 int count = 0;
+
 void loop(void)
 {
-
-  if (pushButton.update())
-  {
-    if (pushButton.fallingEdge())
-    {
-      count = count + 1;
-
-      Serial.println(count);
-    }
-  }
   // generate random values every 5s
-  currentTime = millis();
-  if (currentTime - previousTime > interval)
-  {
-    if (flag)
-    {
-      new_data.motor_rpm = 123;
-      flag = !flag;
-    }
-    else
-    {
-      new_data.motor_rpm = 125;
-      flag = !flag;
-    }
-    previousTime = currentTime;
-  }
+  // currentTime = millis();
+  // if (currentTime - previousTime > interval)
+  // {
+  //   if (flag)
+  //   {
+  //     new_data.motor_rpm = 123;
+  //     new_data.motor_throttle = 123;
+  //     new_data.battery_current_a = 123;
+  //     new_data.battery_voltage_v = 123;
+  //     new_data.battery_soc = 123;
+  //     new_data.battery_soh = 123;
+  //     new_data.motor_temp = 123;
+  //     new_data.motor_controller_temp = 123;
+  //     flag = !flag;
+  //   }
+  //   else
+  //   {
+  //     new_data.motor_rpm = 264;
+  //     new_data.motor_throttle = 264;
+  //     new_data.battery_current_a = 264;
+  //     new_data.battery_voltage_v = 264;
+  //     new_data.battery_soc = 264;
+  //     new_data.battery_soh = 264;
+  //     new_data.motor_temp = 264;
+  //     new_data.motor_controller_temp = 264;
+  //     flag = !flag;
+  //   }
+  //   previousTime = currentTime;
+  // }
   can2.events();
   updateScreen();
-  tft2.fillRect(0, 0, 200, 200, ILI9341_CYAN);
-
-  tft2.fillRect(0, 0, 200, 200, ILI9341_RED);
-
-  Serial.println("test");
+  checkCAN();
 
   // displayData(motor_rpm_data, COL[0], ROW[0], ILI9341_ORANGE, ILI9341_WHITE, 1248, 0, "");
   // displayData(motor_temp_data, COL[0], ROW[3], ILI9341_ORANGE, ILI9341_WHITE, 21.4, 1, "");

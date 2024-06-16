@@ -92,13 +92,23 @@ void drawCell(uint8_t x, uint8_t y, uint8_t xSize, uint8_t ySize, int16_t bgColo
     tft.println(label);
 }
 
-void displayData(FlickerFreePrint<ILI9341_t3> &data, uint8_t x, uint8_t y, int16_t bgColor, int16_t textColor, float value, u_int8_t decimals, String unit, bool boolean = false)
+void displayData(FlickerFreePrint<ILI9341_t3> &data, uint8_t x, uint8_t y, int16_t bgColor, int16_t textColor, float value, u_int8_t decimals, String unit, u_int8_t fontSize = 24, bool boolean = false)
 {
 
     tft.setCursor(x + 8, y + 30);
     tft.setTextColor(textColor);
     tft.setTextSize(3);
-    tft.setFont(Arial_24_Bold);
+    if (fontSize == 24)
+    {
+        tft.setFont(Arial_24_Bold);
+        tft.setCursor(x + 8, y + 30);
+    }
+    else if (fontSize == 60)
+    {
+        tft.setFont(Arial_60_Bold);
+        tft.setCursor(x + 8, y - 20);
+    }
+
     if (boolean)
     {
         if (value == 1)
