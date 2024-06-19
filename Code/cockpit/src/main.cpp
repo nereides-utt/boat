@@ -116,8 +116,8 @@ struct data_layout
   u_int8_t pac_emergency_stop = 0;
   u_int8_t pac_start = 0;
   u_int8_t pac_stop = 0;
-  float pac_current_a = 0;
-  float pac_voltage_v = 0;
+  u_int16_t pac_current_a = 0;
+  u_int16_t pac_voltage_v = 0;
   u_int8_t pac_system_state = 0;
   u_int8_t pac_error_flag = 0;
   u_int8_t pac_hydrogen_consumption_mgs = 0;
@@ -128,6 +128,19 @@ struct data_layout
   u_int16_t pac_produced_energy = 0;
   u_int16_t pac_total_operation_time = 0;
   u_int16_t pac_total_produced_energy = 0;
+
+  // Fuel Cell Current Regulator
+  u_int16_t fccr_current_command = 0;
+  u_int8_t fccr_current_setting_request = 0;
+  u_int8_t fccr_current = 0;
+  u_int16_t fccr_temperature = 0;
+  bool fccr_temperature_error = false;
+  u_int8_t fccr_baudrate = 0;
+  u_int8_t fccr_number_DCDC = 0;
+  u_int8_t fccr_ramp_setting = 0;
+  u_int8_t fccr_current_limit_setting = 0;
+  u_int16_t fccr_max_current = 0;
+  u_int8_t fccr_software_revision = 0;
 };
 
 data_layout old_data;
