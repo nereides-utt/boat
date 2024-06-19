@@ -192,7 +192,7 @@ void canSniff(const CAN_message_t &msg)
                 Serial.println("ARRÊT URGENT");
                 break;
             }
-            Serial.print("FC ERROR" :);
+            Serial.print("FC ERROR : ");
             switch (new_data.fc_error_flag)
             {
             case 0:
