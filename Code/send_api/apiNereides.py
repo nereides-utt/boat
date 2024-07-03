@@ -1,9 +1,4 @@
-
-
-#test commande :
-# mosquitto_pub -h localhost -t battery_temperature -m "{\"temperature\": 25.3}"
-#IP and PORT
-
+import time
 import paho.mqtt.client as mqtt
 import requests
 from dotenv import load_dotenv
@@ -18,14 +13,17 @@ PARAMS  = {
   "team": "d2mKdfuCjv2AB9NQYXMFyGe9DEDL8Pmb"
 }
 
-
-# Charger les variables d'environnement depuis un fichier .env
 load_dotenv()
 
 #-------------------------------------------------------------------------------
 #mettre les bons topics + est ce que batterie températrue
 #'nereides/pac/current_a','nereides/pac/voltage_v'
-TOPICS = ['nereides/pac/temperature_c','nereides/battery/temp_board','nereides/batterySE/temp', 'nereides/battery/current_a','nereides/battery/voltage_v']
+TOPICS = ['nereides/pac/temperature_c',
+            'nereides/battery/temp_board',
+            'nereides/batterySE/temp', 
+            'nereides/battery/current_a',
+            'nereides/battery/voltage_v'
+            ]
 # Variables d'environnement
 BROKER_URL = os.getenv('BROKER_URL', 'test.mosquitto.org')
 BROKER_PORT = int(os.getenv('BROKER_PORT', 1883))
@@ -39,32 +37,10 @@ def on_message(client, userdata, message):
     try:
         payload = message.payload.decode('utf-8')
         topic = message.topic
-        send_to_api(topic, payload)
+        value = float(payload)
+        mettre_a_jour_params(topic,value)
     except Exception as e:
         print(f"Erreur de traitement des données: {e}")
-
-# Envoi des données à l'API
-def send_to_api(topic, payload):
-    try:
-        # Convertir la charge utile en entier
-        value = float(payload)
-        data = {
-            'topic': topic,
-            'payload': {'value': value}
-        }
-
-        mettre_a_jour_params(topic,value)
-
-        #headers = {'Authorization': f'Bearer {API_TOKEN}'}
-        response = requests.post(url = "http://154.62.108.192:3001/monitoringdata/", json= PARAMS)
-        if response.status_code == 200:
-            print(f"API: Données envoyées pour {topic}")
-        else:
-            print(f"API: Échec de l'envoi pour {topic}, Status: {response.status_code}, Message: {response.text}")
-    except ValueError:
-        print(f"Erreur: la charge utile '{payload}' n'est pas un entier valide")
-    except requests.RequestException as e:
-        print(f"API: Erreur de connexion: {e}")
 
 def mettre_a_jour_params(topic, value):
     if topic == TOPICS[0]:
@@ -77,10 +53,6 @@ def mettre_a_jour_params(topic, value):
         PARAMS["nereides_current"] = value
     elif topic == TOPICS[4]:
         PARAMS["nereides_voltage"] = value
-    elif topic == TOPICS[5]:
-        PARAMS["nereides_current2"] = value
-    elif topic == TOPICS[6]:
-        PARAMS["nereides_voltage2"] = value
     print(PARAMS)
 
 
@@ -99,6 +71,16 @@ def on_connect(client, userdata, flags, rc):
 def on_disconnect(client, userdata, rc):
     print(f"Déconnecté du broker MQTT avec le code {rc}")
 
+def envoyer_donnees_api():
+    try:
+        response = requests.post(url = "http://154.62.108.192:3001/monitoringdata/", json= PARAMS)
+        if response.status_code == 200:
+            print("API : données envoyées périodiquement")
+        else: 
+            print(f"API echec") 
+    except requests.RequestException as e: 
+        print(f"API: erreur connexion")
+
 # Configuration du client MQTT
 client = mqtt.Client(protocol=mqtt.MQTTv311)
 client.on_message = on_message
@@ -108,7 +90,14 @@ client.on_disconnect = on_disconnect
 # Connexion au broker MQTT
 try:
     client.connect(BROKER_URL, BROKER_PORT, 60)
-    client.loop_forever()
+    last_sent_time = time.time()
+    interval = 0.75
+    while True:
+        client.loop(timeout=1.0)
+        current_time = time.time()
+        if current_time - last_sent_time >= interval:
+            envoyer_donnees_api()
+            last_send_time = current_time
 except ValueError as e:
     print(f"Erreur de connexion: {e}")
 except Exception as e:
