@@ -73,7 +73,7 @@ def on_disconnect(client, userdata, rc):
 
 def envoyer_donnees_api():
     try:
-        response = requests.post(url = "http://154.62.108.192:3001/monitoringdata/", json= PARAMS)
+        response = requests.post(url = "http://changerlipenfonctiondeleurAPI:3001/monitoringdata/", json= PARAMS)
         if response.status_code == 200:
             print("API : données envoyées périodiquement")
         else: 
