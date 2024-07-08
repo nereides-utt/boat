@@ -19,7 +19,7 @@ load_dotenv()
 #mettre les bons topics + est ce que batterie températrue
 #'nereides/pac/current_a','nereides/pac/voltage_v'
 TOPICS = ['nereides/pac/temperature_c',
-            'nereides/battery/temp_board',
+            'nereides/battery/temp_pack1',
             'nereides/batterySE/temp', 
             'nereides/battery/current_a',
             'nereides/battery/voltage_v'
